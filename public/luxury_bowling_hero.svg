@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-label="Pista de bowling premium al anochecer">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1e1b4b"/>
+      <stop offset="0.55" stop-color="#4c1d95"/>
+      <stop offset="1" stop-color="#6d28d9"/>
+    </linearGradient>
+    <linearGradient id="laneGrad" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="laneSheen" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#38bdf8" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#38bdf8" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#38bdf8" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="ballGrad" x1="0.1" y1="0.1" x2="0.9" y2="0.9">
+      <stop offset="0" stop-color="#7f1d1d"/>
+      <stop offset="1" stop-color="#1c1917"/>
+    </linearGradient>
+    <linearGradient id="pinGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f8fafc"/>
+      <stop offset="1" stop-color="#cbd5e1"/>
+    </linearGradient>
+    <radialGradient id="pinGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#818cf8" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#818cf8" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vignette" cx="0.5" cy="0.42" r="0.75">
+      <stop offset="0" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.55"/>
+    </radialGradient>
+    <filter id="blurGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="26"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="900" fill="url(#sky)"/>
+
+  <circle cx="600" cy="380" r="330" fill="url(#pinGlow)" filter="url(#blurGlow)"/>
+
+  <g fill="#ffffff" opacity="0.85">
+    <path d="M260 120 l6 14 14 6 -14 6 -6 14 -6 -14 -14 -6 14 -6 z"/>
+    <path d="M360 210 l4 10 10 4 -10 4 -4 10 -4 -10 -10 -4 10 -4 z"/>
+    <path d="M560 90 l5 12 12 5 -12 5 -5 12 -5 -12 -12 -5 12 -5 z"/>
+    <path d="M720 180 l4 9 9 4 -9 4 -4 9 -4 -9 -9 -4 9 -4 z"/>
+    <path d="M880 120 l5 12 12 5 -12 5 -5 12 -5 -12 -12 -5 12 -5 z"/>
+    <path d="M650 60 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3 z" opacity="0.6"/>
+    <path d="M180 260 l4 9 9 4 -9 4 -4 9 -4 -9 -9 -4 9 -4 z" opacity="0.6"/>
+    <path d="M980 220 l4 9 9 4 -9 4 -4 9 -4 -9 -9 -4 9 -4 z" opacity="0.6"/>
+  </g>
+
+  <polygon points="0,900 1200,900 1200,560 0,560" fill="#0b1020" opacity="0.55"/>
+  <polygon points="150,900 1050,900 730,360 470,360" fill="url(#laneGrad)"/>
+  <polygon points="150,900 1050,900 730,360 470,360" fill="url(#laneSheen)"/>
+  <polygon points="150,900 470,360 430,360 110,900" fill="#020617"/>
+  <polygon points="1050,900 730,360 770,360 1090,900" fill="#020617"/>
+
+  <g stroke="#38bdf8" stroke-opacity="0.35" stroke-width="5" fill="none">
+    <path d="M220 900 L500 360"/>
+    <path d="M980 900 L700 360"/>
+  </g>
+  <g stroke="#38bdf8" stroke-opacity="0.45" stroke-width="4" fill="none">
+    <path d="M350 900 L585 360"/>
+    <path d="M850 900 L615 360"/>
+  </g>
+
+  <g fill="#64748b">
+    <path d="M530 500 l14 34 -14 34 -14 -34 z"/>
+    <path d="M560 430 l18 44 -18 44 -18 -44 z"/>
+    <path d="M600 380 l22 52 -22 52 -22 -52 z"/>
+    <path d="M470 640 l12 30 -12 30 -12 -30 z"/>
+    <path d="M680 560 l12 30 -12 30 -12 -30 z"/>
+    <path d="M390 800 l10 24 -10 24 -10 -24 z"/>
+    <path d="M760 740 l10 24 -10 24 -10 -24 z"/>
+  </g>
+
+  <g transform="translate(450 250)">
+    <circle r="120" fill="url(#pinGlow)" filter="url(#blurGlow)"/>
+  </g>
+  <g fill="url(#pinGrad)" stroke="#94a3b8" stroke-opacity="0.4" stroke-width="1.5">
+    <g transform="translate(600 150)">
+      <path d="M-8 0 C-8 -6 -5 -10 0 -12 C5 -10 8 -6 8 0 L7 46 L-7 46 Z"/>
+      <circle cy="-16" r="6"/>
+    </g>
+    <g transform="translate(567 175)">
+      <path d="M-7 0 C-7 -5 -4.5 -8.5 0 -10 C4.5 -8.5 7 -5 7 0 L6 40 L-6 40 Z"/>
+      <circle cy="-14" r="5"/>
+    </g>
+    <g transform="translate(633 175)">
+      <path d="M-7 0 C-7 -5 -4.5 -8.5 0 -10 C4.5 -8.5 7 -5 7 0 L6 40 L-6 40 Z"/>
+      <circle cy="-14" r="5"/>
+    </g>
+    <g transform="translate(534 200)">
+      <path d="M-6 0 C-6 -4.5 -4 -7.5 0 -9 C4 -7.5 6 -4.5 6 0 L5 34 L-5 34 Z"/>
+      <circle cy="-12" r="4.5"/>
+    </g>
+    <g transform="translate(600 200)">
+      <path d="M-6 0 C-6 -4.5 -4 -7.5 0 -9 C4 -7.5 6 -4.5 6 0 L5 34 L-5 34 Z"/>
+      <circle cy="-12" r="4.5"/>
+    </g>
+    <g transform="translate(666 200)">
+      <path d="M-6 0 C-6 -4.5 -4 -7.5 0 -9 C4 -7.5 6 -4.5 6 0 L5 34 L-5 34 Z"/>
+      <circle cy="-12" r="4.5"/>
+    </g>
+    <g transform="translate(501 225)">
+      <path d="M-5.5 0 C-5.5 -4 -3.5 -7 0 -8 C3.5 -7 5.5 -4 5.5 0 L4.5 30 L-4.5 30 Z"/>
+      <circle cy="-11" r="4"/>
+    </g>
+    <g transform="translate(567 225)">
+      <path d="M-5.5 0 C-5.5 -4 -3.5 -7 0 -8 C3.5 -7 5.5 -4 5.5 0 L4.5 30 L-4.5 30 Z"/>
+      <circle cy="-11" r="4"/>
+    </g>
+    <g transform="translate(633 225)">
+      <path d="M-5.5 0 C-5.5 -4 -3.5 -7 0 -8 C3.5 -7 5.5 -4 5.5 0 L4.5 30 L-4.5 30 Z"/>
+      <circle cy="-11" r="4"/>
+    </g>
+    <g transform="translate(699 225)">
+      <path d="M-5.5 0 C-5.5 -4 -3.5 -7 0 -8 C3.5 -7 5.5 -4 5.5 0 L4.5 30 L-4.5 30 Z"/>
+      <circle cy="-11" r="4"/>
+    </g>
+  </g>
+
+  <ellipse cx="610" cy="820" rx="120" ry="22" fill="#020617" opacity="0.6" filter="url(#blurGlow)"/>
+  <g transform="translate(610 700)">
+    <circle r="62" fill="url(#ballGrad)"/>
+    <path d="M-32 -36 a48 48 0 0 1 30 -16" stroke="#f8fafc" stroke-opacity="0.5" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <circle cx="18" cy="-14" r="15" fill="#f8fafc" opacity="0.18"/>
+  </g>
+
+  <rect width="1200" height="900" fill="url(#vignette)"/>
+</svg>
