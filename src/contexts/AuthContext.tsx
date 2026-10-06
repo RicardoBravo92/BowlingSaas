@@ -19,11 +19,11 @@ interface AuthContextType {
     full_name?: string;
   }) => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
   isLoading: boolean;
   /** Convenience helpers */
   isOwner: boolean;
   isCashier: boolean;
-  isUser: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -75,13 +75,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setUser(null);
   };
 
+  /** Re-fetch the current profile (e.g. after a role change) and sync storage. */
+  const refreshUser = async () => {
+    const meRes = await api.getMe();
+    const me: User = meRes.data;
+    localStorage.setItem('user', JSON.stringify(me));
+    setUser(me);
+  };
+
   const isOwner = user?.role === 'OWNER';
   const isCashier = user?.role === 'CASHIER' || user?.role === 'MANAGER' || isOwner;
-  const isUser = user?.role === 'USER' || (!isOwner && !isCashier);
 
   return (
     <AuthContext.Provider
-      value={{ user, login, register, logout, isLoading, isOwner, isCashier, isUser }}
+      value={{ user, login, register, logout, refreshUser, isLoading, isOwner, isCashier }}
     >
       {children}
     </AuthContext.Provider>

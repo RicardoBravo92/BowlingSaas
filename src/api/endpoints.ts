@@ -62,7 +62,7 @@ export interface MyBooking {
   booking_date: string;
   total_price: number;
   status: 'PENDING' | 'PAID' | 'CANCELLED' | 'ASSIGNED';
-  expires_at: string;
+  expires_at: string | null;
   created_at: string;
   items: MyBookingItem[];
 }
@@ -132,6 +132,10 @@ export const login = (data: LoginRequest) => {
 
 export const register = (data: RegisterRequest) => api.post('/auth/register', data);
 export const getMe = () => api.get('/auth/me');
+export const forgotPassword = (email: string) =>
+  api.post<{ message: string }>('/auth/forgot-password', { email });
+export const resetPassword = (token: string, new_password: string) =>
+  api.post<{ message: string }>('/auth/reset-password', { token, new_password });
 
 // Bookings
 export interface AvailabilitySlot {

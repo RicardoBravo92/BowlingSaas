@@ -3,11 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import * as api from '@/api/endpoints';
-import { type MyBooking } from '@/api/endpoints';
+import { type AdminBooking, type MyBooking } from '@/api/endpoints';
 import { useAuth, type User } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
-  TrendingUp,
   Calendar,
   DollarSign,
   MoreHorizontal,
@@ -19,6 +18,7 @@ import {
   Ticket,
   Loader2,
   Trash2,
+  TrendingUp,
 } from 'lucide-react';
 import {
   Card,
@@ -28,24 +28,13 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 
-interface StatBooking {
-  id: number;
-  client_name?: string;
-  name?: string;
-  lane?: string;
-  lane_name?: string;
-  time?: string;
-  slot_time?: string;
-  amount?: number;
-  price?: number;
-  status?: string;
-}
-
 interface DashboardStats {
-  total_revenue?: number;
-  total_paid_bookings?: number;
-  revenue_last_7_days?: number;
-  average_ticket?: number;
+  summary?: {
+    total_revenue?: number;
+    total_paid_bookings?: number;
+    revenue_last_7_days?: number;
+    average_ticket?: number;
+  };
   period?: string;
   daily_history?: { date: string; count: number }[];
 }
@@ -68,23 +57,13 @@ const StatCard: React.FC<{
   title: string;
   value: string | number;
   icon: React.ComponentType<{ className?: string }>;
-  trend?: string;
-  trendUp?: boolean;
-}> = ({ title, value, icon: Icon, trend, trendUp }) => (
+}> = ({ title, value, icon: Icon }) => (
   <Card className='shadow-sm border-slate-100 hover:shadow-md transition-shadow group'>
     <CardContent className='p-6'>
       <div className='flex items-center justify-between mb-4'>
         <div className='w-12 h-12 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-300'>
           <Icon className='w-6 h-6' />
         </div>
-        {trend && (
-          <div
-            className={`px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 ${trendUp ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}
-          >
-            <TrendingUp className={`w-3 h-3 ${trendUp ? '' : 'rotate-180'}`} />
-            {trend}
-          </div>
-        )}
       </div>
       <div className='space-y-1'>
         <p className='text-sm font-medium text-slate-500'>{title}</p>
@@ -301,26 +280,65 @@ const CustomerHome: React.FC<{ user: User | null }> = ({ user }) => {
 };
 
 const Dashboard: React.FC = () => {
-  const { user, isOwner, isCashier } = useAuth();
+  const { user, isOwner } = useAuth();
   const navigate = useNavigate();
-  const [recentBookings] = useState<StatBooking[]>([]);
+  const [recentBookings, setRecentBookings] = useState<AdminBooking[]>([]);
+  const [recentLoading, setRecentLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats>({});
+  const [statsError, setStatsError] = useState('');
+  const [recentError, setRecentError] = useState('');
 
-  const isStaff = isOwner || isCashier;
+  const summary = stats.summary ?? {};
+  const periodLabel = stats.period?.toLowerCase().includes('30')
+    ? 'últimos 30 días'
+    : stats.period || 'últimos 30 días';
 
   useEffect(() => {
-    if (isStaff) {
-      api
-        .getStats()
-        .then((res) => {
-          setStats(res.data);
-        })
-        .catch(() => setStats({}));
-    }
-  }, [isStaff]);
+    if (!isOwner) return;
+    let active = true;
+    api
+      .getStats()
+      .then((res) => {
+        if (active) setStats(res.data);
+      })
+      .catch(() => {
+        if (active) {
+          setStats({});
+          setStatsError('No se pudieron cargar las métricas.');
+        }
+      });
+    // Bound the payload: only paid bookings within the last 30 days.
+    const from = new Date();
+    from.setDate(from.getDate() - 30);
+    api
+      .getAdminBookings({ status: 'PAID', from_date: from.toISOString().slice(0, 10) })
+      .then((res) => {
+        if (!active) return;
+        // Repo returns booking_date DESC (future-first); sort by created_at
+        // so "Actividad Reciente" really shows the most recently made bookings.
+        const recent = Array.isArray(res.data)
+          ? [...res.data]
+              .sort((a, b) => b.created_at.localeCompare(a.created_at))
+              .slice(0, 5)
+          : [];
+        setRecentBookings(recent);
+      })
+      .catch(() => {
+        if (active) {
+          setRecentBookings([]);
+          setRecentError('No se pudieron cargar las reservas recientes.');
+        }
+      })
+      .finally(() => {
+        if (active) setRecentLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [isOwner]);
 
-  // If customer or guest, show their personal summary (the grid lives in /bookings)
-  if (!user || user.role === 'USER') {
+  // Only the owner sees the admin dashboard (stats endpoint is owner-only).
+  if (!isOwner) {
     return <CustomerHome user={user} />;
   }
 
@@ -336,10 +354,6 @@ const Dashboard: React.FC = () => {
           </p>
         </div>
         <div className='flex gap-3'>
-          <button className='flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors shadow-sm'>
-            <Calendar className='w-4 h-4' />
-            Esta Semana
-          </button>
           <Button
             onClick={() => navigate('/bookings')}
             className='gap-2 bg-indigo-600 hover:bg-indigo-700'
@@ -353,31 +367,33 @@ const Dashboard: React.FC = () => {
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'>
         <StatCard
           title='Ventas Totales'
-          value={`$${(stats.total_revenue || 0).toFixed(2)}`}
+          value={`$${(summary.total_revenue ?? 0).toFixed(2)}`}
           icon={DollarSign}
-          trend="+12%"
-          trendUp
         />
         <StatCard
           title='Reservas Pagadas'
-          value={stats.total_paid_bookings || '0'}
+          value={summary.total_paid_bookings ?? 0}
           icon={Calendar}
-          trend="+5%"
-          trendUp
         />
         <StatCard
           title='Ventas (7 días)'
-          value={`$${(stats.revenue_last_7_days || 0).toFixed(2)}`}
-          icon={TrendingUp}
-          trend="+8%"
-          trendUp
+          value={`$${(summary.revenue_last_7_days ?? 0).toFixed(2)}`}
+          icon={CalendarDays}
         />
         <StatCard
           title='Ticket Promedio'
-          value={`$${(stats.average_ticket || 0).toFixed(2)}`}
+          value={`$${(summary.average_ticket ?? 0).toFixed(2)}`}
           icon={UserCheck}
         />
       </div>
+
+      {(statsError || recentError) && (
+        <div className="p-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg">
+          {statsError}
+          {statsError && recentError && ' '}
+          {recentError}
+        </div>
+      )}
 
       <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
         <Card className='lg:col-span-2 shadow-sm border-slate-100 overflow-hidden'>
@@ -385,7 +401,7 @@ const Dashboard: React.FC = () => {
             <div className='space-y-1'>
               <CardTitle className='text-lg'>Actividad Reciente</CardTitle>
               <CardDescription>
-                Últimas reservas confirmadas en el sistema.
+                Últimas reservas pagadas en el sistema.
               </CardDescription>
             </div>
             <button className='p-2 rounded-lg hover:bg-slate-200 transition-colors text-slate-500'>
@@ -405,7 +421,13 @@ const Dashboard: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className='text-sm divide-y divide-slate-100'>
-                  {recentBookings.length === 0 ? (
+                  {recentLoading ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
+                        <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+                      </td>
+                    </tr>
+                  ) : recentBookings.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
                         No hay reservas recientes para mostrar.
@@ -416,24 +438,27 @@ const Dashboard: React.FC = () => {
                       <tr
                         key={booking.id}
                         className='hover:bg-slate-50 transition-colors group cursor-pointer'
+                        onClick={() => navigate('/admin-bookings')}
                       >
                         <td className='px-6 py-4 font-semibold text-slate-700'>
-                          {booking.client_name || booking.name || 'Invitado'}
+                          {booking.user_full_name}
                         </td>
                         <td className='px-6 py-4 text-slate-600'>
-                          {booking.lane || booking.lane_name}
+                          {booking.items.map((i) => `Pista ${i.lane_number}`).join(', ')}
                         </td>
                         <td className='px-6 py-4 text-slate-600'>
-                          {booking.time || booking.slot_time}
+                          {booking.items
+                            .map((i) => `${String(i.start_hour).padStart(2, '0')}:00`)
+                            .join(', ')}
                         </td>
                         <td className='px-6 py-4 font-medium text-slate-900'>
-                          {booking.amount || booking.price}
+                          ${booking.total_price.toFixed(2)}
                         </td>
                         <td className='px-6 py-4 text-right'>
                           <span
-                            className='px-2.5 py-1 rounded-full text-xs font-bold leading-none bg-emerald-50 text-emerald-600'
+                            className={`px-2.5 py-1 rounded-full text-xs font-bold leading-none border ${statusBadge[booking.status]}`}
                           >
-                            Pagado
+                            {statusLabel[booking.status]}
                           </span>
                         </td>
                       </tr>
@@ -444,10 +469,10 @@ const Dashboard: React.FC = () => {
             </div>
             <div className='p-4 border-t border-slate-100'>
               <button
-                onClick={() => navigate('/bookings')}
+                onClick={() => navigate('/admin-bookings')}
                 className='w-full flex items-center justify-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-700 py-2 rounded-lg transition-colors group'
               >
-                Ver Disponibilidad de Pistas
+                Ver todas las reservas
                 <ChevronRight className='w-4 h-4 group-hover:translate-x-1 transition-transform' />
               </button>
             </div>
@@ -457,7 +482,7 @@ const Dashboard: React.FC = () => {
         <Card className='shadow-sm border-slate-100'>
           <CardHeader className='p-6 pb-2'>
             <CardTitle className='text-lg'>Ocupación del Mes</CardTitle>
-            <CardDescription>Reporte de {stats.period || 'últimos 30 días'}.</CardDescription>
+            <CardDescription>Reporte de {periodLabel}.</CardDescription>
           </CardHeader>
           <CardContent className='p-6 pt-4 space-y-6'>
             {(stats.daily_history || []).slice(-4).map((item) => (

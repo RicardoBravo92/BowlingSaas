@@ -66,6 +66,11 @@ export default function Login() {
               {loading ? 'Logging in...' : 'Sign in'}
             </Button>
             <div className="text-sm text-center text-slate-500">
+              <Link to="/forgot-password" className="text-blue-600 hover:underline">
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
+            <div className="text-sm text-center text-slate-500">
               Don't have an account?{' '}
               <Link to="/register" className="text-blue-600 hover:underline">
                 Register

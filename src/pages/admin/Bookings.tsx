@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
@@ -99,12 +99,19 @@ export default function AdminBookings() {
     setToDate(todayStr);
   }, [todayStr]);
 
+  // Guards against out-of-order responses from the filters (WARNING-4).
+  const fetchSeq = useRef(0);
+  // Same guard for the availability grid fetched inside the assign dialog.
+  const gridSeqRef = useRef(0);
+
   const fetchBookings = useCallback(async () => {
+    const seq = ++fetchSeq.current;
     setLoading(true);
     setError('');
     setSuccess('');
     try {
       if (fromDate && toDate && fromDate > toDate) {
+        if (seq !== fetchSeq.current) return;
         setBookings([]);
         setError('La fecha "desde" no puede ser mayor que "hasta".');
         return;
@@ -114,19 +121,31 @@ export default function AdminBookings() {
         from_date: fromDate || undefined,
         to_date: toDate || undefined,
       });
+      if (seq !== fetchSeq.current) return;
       setBookings(Array.isArray(res.data) ? res.data : []);
     } catch (err: unknown) {
+      if (seq !== fetchSeq.current) return;
       const e = err as { response?: { data?: { detail?: string } } };
       setError(e?.response?.data?.detail || 'Error al cargar las reservas.');
       setBookings([]);
     } finally {
-      setLoading(false);
+      if (seq === fetchSeq.current) setLoading(false);
     }
   }, [statusFilter, fromDate, toDate]);
 
   useEffect(() => {
     fetchBookings();
   }, [fetchBookings]);
+
+  // A quick filter change invalidates any in-flight fetch.
+  useEffect(() => {
+    return () => {
+      // Invalidating on unmount is intentional: we WANT the freshest value at
+      // cleanup time, so reading the ref here is correct, not a stale read.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      fetchSeq.current++;
+    };
+  }, []);
 
   const runAction = useCallback(
     async (booking: AdminBooking, action: 'confirm' | 'cancel') => {
@@ -206,28 +225,59 @@ export default function AdminBookings() {
     }
   }, [moveTarget, moveSlots, fetchBookings]);
 
+  // Out-of-order guard for the user search (BLOCK-2): only the most recent
+  // query may populate the dropdown.
+  const searchSeq = useRef(0);
   const searchUsers = useCallback(
     async (query: string) => {
       if (!query.trim()) {
+        searchSeq.current++;
         setAssignUsers([]);
+        setAssignSearching(false);
         return;
       }
+      const seq = ++searchSeq.current;
       setAssignSearching(true);
       try {
         const res = await api.searchUsers(query.trim());
+        if (seq !== searchSeq.current) return;
         setAssignUsers(Array.isArray(res.data) ? res.data : []);
         setAssignError('');
       } catch (err: unknown) {
+        if (seq !== searchSeq.current) return;
         const e = err as { response?: { data?: { detail?: string } } };
         setAssignError(e?.response?.data?.detail || 'No se pudo buscar al usuario.');
       } finally {
-        setAssignSearching(false);
+        if (seq === searchSeq.current) setAssignSearching(false);
       }
     },
     [],
   );
 
+  // Debounce the user search so every keystroke doesn't hit the API.
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelUserSearch = useCallback(() => {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchSeq.current++;
+  }, []);
+  const queueUserSearch = useCallback(
+    (query: string) => {
+      if (searchTimer.current) clearTimeout(searchTimer.current);
+      searchTimer.current = setTimeout(() => {
+        void searchUsers(query);
+      }, 300);
+    },
+    [searchUsers],
+  );
+
+  useEffect(() => {
+    return () => {
+      cancelUserSearch();
+    };
+  }, [cancelUserSearch]);
+
   const openAssign = useCallback(async () => {
+    cancelUserSearch();
     setAssignDate(todayStr);
     setAssignUserQuery('');
     setAssignUsers([]);
@@ -238,16 +288,19 @@ export default function AdminBookings() {
     setAssignGrid([]);
     setAssignOpen(true);
     setAssignGridLoading(true);
+    const gridSeq = ++gridSeqRef.current;
     try {
       const res = await api.getAvailability(todayStr);
+      if (gridSeq !== gridSeqRef.current) return;
       setAssignGrid(Array.isArray(res.data) ? res.data : []);
     } catch (err: unknown) {
+      if (gridSeq !== gridSeqRef.current) return;
       const e = err as { response?: { data?: { detail?: string } } };
       setAssignError(e?.response?.data?.detail || 'No se pudo cargar la disponibilidad.');
     } finally {
-      setAssignGridLoading(false);
+      if (gridSeq === gridSeqRef.current) setAssignGridLoading(false);
     }
-  }, [todayStr]);
+  }, [todayStr, cancelUserSearch]);
 
   const changeAssignDate = useCallback(async (date: string) => {
     setAssignDate(date);
@@ -255,14 +308,17 @@ export default function AdminBookings() {
     setAssignError('');
     setAssignGrid([]);
     setAssignGridLoading(true);
+    const gridSeq = ++gridSeqRef.current;
     try {
       const res = await api.getAvailability(date);
+      if (gridSeq !== gridSeqRef.current) return;
       setAssignGrid(Array.isArray(res.data) ? res.data : []);
     } catch (err: unknown) {
+      if (gridSeq !== gridSeqRef.current) return;
       const e = err as { response?: { data?: { detail?: string } } };
       setAssignError(e?.response?.data?.detail || 'No se pudo cargar la disponibilidad.');
     } finally {
-      setAssignGridLoading(false);
+      if (gridSeq === gridSeqRef.current) setAssignGridLoading(false);
     }
   }, []);
 
@@ -659,7 +715,7 @@ export default function AdminBookings() {
       </Dialog>
 
       {/* Assign dialog */}
-      <Dialog open={assignOpen} onOpenChange={(open) => { if (!open) setAssignOpen(false); }}>
+      <Dialog open={assignOpen} onOpenChange={(open) => { if (!open) { cancelUserSearch(); setAssignOpen(false); } }}>
         <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Asignar pista a un cliente</DialogTitle>
@@ -681,7 +737,7 @@ export default function AdminBookings() {
                     setAssignUserQuery(e.target.value);
                     setAssignSelectedUser(null);
                     setAssignUsers([]);
-                    void searchUsers(e.target.value);
+                    queueUserSearch(e.target.value);
                   }}
                   className="pl-9 h-10 rounded-lg border-slate-200 text-sm"
                 />

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Users, Shield, UserCheck, Loader2, ChevronRight, Search, RefreshCw } from 'lucide-react';
 import * as api from '@/api/endpoints';
+import { apiErrorMessage } from '@/lib/api-error';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -37,6 +39,7 @@ const roleBadge: Record<string, string> = {
 const roleOptions = ['USER', 'CASHIER', 'MANAGER', 'MAINTENANCE', 'OWNER'] as const;
 
 export default function UsersAdmin() {
+  const { user: currentUser, refreshUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -44,6 +47,7 @@ export default function UsersAdmin() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [updatingRole, setUpdatingRole] = useState(false);
   const [roleMsg, setRoleMsg] = useState('');
+  const [roleErr, setRoleErr] = useState('');
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -69,6 +73,7 @@ export default function UsersAdmin() {
     if (!selectedUser) return;
     setUpdatingRole(true);
     setRoleMsg('');
+    setRoleErr('');
     try {
       const res = await api.updateUser(selectedUser.id, { role: newRole });
       setRoleMsg('Rol actualizado correctamente');
@@ -76,9 +81,14 @@ export default function UsersAdmin() {
         prev.map((u) => (u.id === selectedUser.id ? { ...u, role: res.data.role } : u))
       );
       setSelectedUser({ ...selectedUser, role: res.data.role as User['role'] });
+      // Keep the session profile in sync when the owner edits their own role.
+      if (currentUser?.id === selectedUser.id) {
+        refreshUser().catch(() => {
+          setRoleErr('Rol guardado, pero no se pudo actualizar tu sesión. Cierra sesión para aplicarlo.');
+        });
+      }
     } catch (err: unknown) {
-      const e = err as { response?: { data?: { detail?: string } } };
-      setRoleMsg(e?.response?.data?.detail || 'Error al actualizar el rol');
+      setRoleErr(apiErrorMessage(err, 'Error al actualizar el rol'));
     } finally {
       setUpdatingRole(false);
     }
@@ -254,10 +264,14 @@ export default function UsersAdmin() {
                     </div>
                   )}
 
+                  {roleErr && (
+                    <div className="p-3 text-xs rounded-lg border text-red-600 bg-red-50 border-red-200">
+                      {roleErr}
+                    </div>
+                  )}
+
                   {roleMsg && (
-                    <div className={`p-3 text-xs rounded-lg border ${roleMsg.includes('Error')
-                      ? 'text-red-600 bg-red-50 border-red-200'
-                      : 'text-emerald-700 bg-emerald-50 border-emerald-200'}`}>
+                    <div className="p-3 text-xs rounded-lg border text-emerald-700 bg-emerald-50 border-emerald-200">
                       {roleMsg}
                     </div>
                   )}
